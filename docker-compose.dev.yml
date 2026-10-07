@@ -1,0 +1,14 @@
+# Development: only PostgreSQL in Docker; run the API and web UI on the host (npm run dev:api / dev:web).
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: converter
+      POSTGRES_PASSWORD: converter
+      POSTGRES_DB: converter
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata-dev:/var/lib/postgresql/data
+volumes:
+  pgdata-dev:

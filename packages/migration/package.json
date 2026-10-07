@@ -1,0 +1,8 @@
+{
+  "name": "@b44/migration",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "exports": { ".": "./src/index.ts" },
+  "dependencies": { "archiver": "^7.0.1", "@b44/shared": "*" }
+}

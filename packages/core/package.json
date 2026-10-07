@@ -1,0 +1,14 @@
+{
+  "name": "@b44/core",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "exports": { ".": "./src/index.ts" },
+  "dependencies": {
+    "@b44/shared": "*",
+    "@b44/extractor": "*",
+    "@b44/analyzer": "*",
+    "@b44/migration": "*",
+    "@b44/storage": "*"
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "name": "base44-local-converter",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "workspaces": ["apps/*", "packages/*"],
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "dev:api": "npm run dev -w @b44/api",
+    "dev:web": "npm run dev -w @b44/web",
+    "build": "npm run build -w @b44/web && npm run build -w @b44/api",
+    "typecheck": "tsc --noEmit -p tsconfig.json && npm run typecheck -w @b44/web",
+    "test": "vitest run",
+    "convert": "tsx scripts/convert.ts"
+  },
+  "devDependencies": {
+    "@types/archiver": "^6.0.3",
+    "@types/node": "^22.10.0",
+    "@types/pg": "^8.11.10",
+    "@types/yauzl": "^2.10.3",
+    "tsup": "^8.3.5",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
+  }
+}
