@@ -42,6 +42,76 @@ Base44 export ZIP ──► Converter ──► Self-hosted project (Docker)
 | Develop or use the CLI | Node.js 22 or newer, plus a PostgreSQL database (the dev compose file provides one) |
 | Run a converted project | Docker, or Node.js 20+ and PostgreSQL |
 
+### Preparing an Ubuntu server (22.04 / 24.04)
+
+Run these commands on the server (as a user with `sudo`). Skip any step you have already done.
+
+**Step 1. Update the system and install basic tools.**
+
+```bash
+sudo apt update && sudo apt upgrade -y
+sudo apt install -y ca-certificates curl gnupg git unzip
+```
+
+**Step 2. Install Docker Engine and the Compose plugin** (from Docker's official repository).
+
+```bash
+sudo install -m 0755 -d /etc/apt/keyrings
+sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+sudo chmod a+r /etc/apt/keyrings/docker.asc
+
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] \
+https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo "$VERSION_CODENAME") stable" \
+  | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+
+sudo apt update
+sudo apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+```
+
+**Step 3. Allow your user to run Docker without `sudo`.**
+
+```bash
+sudo usermod -aG docker $USER
+```
+
+Log out and log back in (or run `newgrp docker`) so the change takes effect.
+
+**Step 4. Check that Docker works.**
+
+```bash
+docker --version
+docker compose version
+docker run --rm hello-world
+```
+
+**Step 5. Get the project onto the server.**
+
+```bash
+git clone <your-repository-url> base44-local-converter    # or upload the folder with scp / rsync
+cd base44-local-converter
+```
+
+**Step 6. Open the firewall port** (only if `ufw` is enabled). Replace `4000` with your `APP_PORT`.
+
+```bash
+sudo ufw allow OpenSSH
+sudo ufw allow 4000/tcp
+sudo ufw status
+```
+
+> The converter has no login. Don't open this port to the whole internet; restrict it to your IP
+> (`sudo ufw allow from <your-ip> to any port 4000 proto tcp`) or put it behind an authenticating reverse proxy.
+
+**Step 7. (Only for development or the CLI) Install Node.js 22.**
+
+```bash
+curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
+sudo apt install -y nodejs
+node --version      # should print v22.x
+```
+
+Then continue with the [Quick start](#2-quick-start-docker). The server is then reachable at `http://<server-ip>:4000`.
+
 ---
 
 ## 2. Quick start (Docker)
