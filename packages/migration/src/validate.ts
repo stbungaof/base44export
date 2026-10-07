@@ -46,8 +46,9 @@ export async function validateOutput(ctx: MigrationContext, opts: { build: boole
   for await (const abs of walk(ctx.appDir)) {
     if (!/\.(jsx?|tsx?|mjs|cjs|vue|svelte)$/.test(abs)) continue;
     const rel = toPosix(path.relative(ctx.appDir, abs));
-    if (rel.startsWith('functions/')) continue;
-    if ((await fs.readFile(abs, 'utf8')).includes("'@base44/sdk'") || (await fs.readFile(abs, 'utf8')).includes('"@base44/sdk"')) {
+    if (rel.startsWith('functions/') || (ctx.shimPath && rel.startsWith(ctx.shimPath + '/'))) continue;
+    const text = await fs.readFile(abs, 'utf8');
+    if (text.includes("'@base44/sdk'") || text.includes('"@base44/sdk"')) {
       residual++;
       ctx.addFinding({ severity: 'manual', category: 'source', message: 'Unconverted @base44/sdk reference remains.', file: rel });
     }

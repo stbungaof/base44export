@@ -93,8 +93,16 @@ export function buildPlan(ctx: MigrationContext): MigrationPlan {
       automatic: true,
     });
   }
+  if ('@base44/vite-plugin' in b.packages) {
+    step({
+      id: 'vite-plugin',
+      stage: 'TRANSFORM',
+      title: "Remove @base44/vite-plugin from the Vite config and package.json (adds an explicit '@' alias if needed)",
+      automatic: true,
+    });
+  }
   for (const pkgName of Object.keys(b.packages)) {
-    if (pkgName !== '@base44/sdk') {
+    if (pkgName !== '@base44/sdk' && pkgName !== '@base44/vite-plugin') {
       manual.push({
         severity: 'manual',
         category: 'dependencies',
@@ -102,20 +110,35 @@ export function buildPlan(ctx: MigrationContext): MigrationPlan {
       });
     }
   }
-  for (const [name, hits] of Object.entries(b.authUsage)) {
+  const authNames = Object.keys(b.authUsage);
+  if (authNames.length > 0) {
+    step({
+      id: 'auth',
+      stage: 'CONFIG',
+      title: 'Generate email/password authentication (register, login, signed tokens) and a hosted /login page',
+      automatic: true,
+    });
     manual.push({
-      severity: name === 'me' || name === 'isAuthenticated' || name === 'logout' ? 'warning' : 'manual',
+      severity: 'warning',
       category: 'auth',
       message:
-        name === 'me' || name === 'isAuthenticated' || name === 'logout'
-          ? `base44.auth.${name}() is served by a single local user (no real login). Add authentication before exposing the app.`
-          : `base44.auth.${name}() has no local equivalent; implement manually.`,
+        'Authentication is generated: the first account registered at /register becomes admin; further sign-ups are off unless ALLOW_REGISTRATION=true. Roles and entity-level access rules from Base44 are NOT enforced - every signed-in user can read and write every entity.',
+    });
+  }
+  const AUTH_SUPPORTED = new Set(['me', 'isAuthenticated', 'logout', 'redirectToLogin', 'loginViaEmailPassword', 'register', 'setToken']);
+  for (const [name, hits] of Object.entries(b.authUsage)) {
+    if (AUTH_SUPPORTED.has(name)) continue;
+    manual.push({
+      severity: 'manual',
+      category: 'auth',
+      message: `base44.auth.${name}() needs an email service or OAuth provider and is not available self-hosted; calls will throw until you implement it.`,
       file: hits[0]?.file,
       line: hits[0]?.line,
     });
   }
+  const INTEGRATIONS_SUPPORTED = new Set(['Core.UploadFile', 'Core.UploadPrivateFile', 'Core.CreateFileSignedUrl']);
   for (const [name, hits] of Object.entries(b.integrationUsage)) {
-    if (name === 'Core.UploadFile') continue;
+    if (INTEGRATIONS_SUPPORTED.has(name)) continue;
     manual.push({
       severity: 'manual',
       category: 'integrations',
@@ -125,6 +148,7 @@ export function buildPlan(ctx: MigrationContext): MigrationPlan {
     });
   }
   for (const [name, hits] of Object.entries(b.otherSdkUsage)) {
+    if (name === 'app') continue; // base44.app.getPublicSettings() is implemented
     manual.push({
       severity: 'manual',
       category: 'sdk',

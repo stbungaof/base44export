@@ -83,6 +83,26 @@ describe('pipeline on a Base44-style export', () => {
     expect(result.stages.find((s) => s.name === 'EXTRACT')?.status).toBe('skipped');
   });
 
+  it('reads entity schemas from base44/entities/*.jsonc and does not flag its own shim', async () => {
+    const files = {
+      'app/package.json': JSON.stringify({ name: 'a', dependencies: { vite: '5', react: '18', '@base44/sdk': '1' } }),
+      'app/src/api/base44Client.js': "import { createClient } from '@base44/sdk';\nexport const base44 = createClient({});\n",
+      'app/src/p.jsx': 'const c = await base44.entities.Customer.list();',
+      'app/AGENTS.md': 'see https://app.base44.com/docs',
+      'app/base44/entities/Customer.jsonc':
+        '// a customer\n{\n  "name": "Customer", /* block */\n  "type": "object",\n  "properties": { "name": { "type": "string", "description": "a // not a comment" }, },\n  "required": ["name"],\n}\n',
+    };
+    const { result, logs } = await convert(files, 'jsonc');
+    expect(result.stages.filter((s) => s.status !== 'succeeded'), logs.join('\n')).toEqual([]);
+    const report = JSON.parse(await fs.readFile(path.join(result.projectDir, 'MIGRATION_REPORT.json'), 'utf8'));
+    expect(report.detection.entities).toEqual(['Customer']);
+    expect(await fs.readFile(path.join(result.projectDir, 'server/schema.sql'), 'utf8')).toContain('CREATE TABLE IF NOT EXISTS "customer"');
+    const msgs = report.findings.map((f: any) => f.message).join('\n');
+    expect(msgs).not.toContain('Unconverted @base44/sdk');
+    expect(msgs).not.toContain('Base44-hosted URL');
+    expect(report.job.stages.find((s: any) => s.name === 'REPORT').status).toBe('succeeded');
+  });
+
   it('handles a project with no Base44 usage and no entities', async () => {
     const { result } = await convert({ 'x/package.json': '{"name":"x","dependencies":{"vite":"5"}}', 'x/index.html': '<p/>' }, 'plain');
     expect(result.status).toBe('succeeded');

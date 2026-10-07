@@ -60,6 +60,16 @@ export async function generateDatabase(ctx: MigrationContext): Promise<void> {
       ctx.addFinding({ severity: 'manual', category: 'database', message: `Entity name "${ent.name}" is not a safe identifier; skipped.`, file: ent.file });
       continue;
     }
+    if (ent.name === 'User') {
+      // Base44's built-in User entity: accounts live in the generated app_users table (email/password auth).
+      ctx.addFinding({
+        severity: 'info',
+        category: 'database',
+        message: 'Built-in User entity is not exposed as a table; accounts are stored in app_users (id, email, full_name, role). Custom User fields are not migrated.',
+        file: ent.file,
+      });
+      continue;
+    }
     const table = snakeCase(ent.name);
     if (usedTables.has(table)) {
       ctx.addFinding({ severity: 'manual', category: 'database', message: `Entity "${ent.name}" maps to duplicate table "${table}"; skipped.`, file: ent.file });

@@ -1,9 +1,9 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import type { Analysis, EntityInfo, Hit } from '@b44/shared';
-import { toPosix, walk } from '@b44/shared';
+import { parseJsonc, toPosix, walk } from '@b44/shared';
 
-const TEXT_EXT = new Set(['.js', '.jsx', '.ts', '.tsx', '.mjs', '.cjs', '.json', '.html', '.vue', '.svelte', '.env', '.md']);
+const TEXT_EXT = new Set(['.js', '.jsx', '.ts', '.tsx', '.mjs', '.cjs', '.json', '.html', '.vue', '.svelte', '.env', '.jsonc']);
 const MAX_FILE_BYTES = 1024 * 1024;
 const MAX_HITS_PER_KEY = 50;
 
@@ -15,7 +15,7 @@ const RE = {
   integration: /\bbase44\.integrations\.(\w+)\.(\w+)/g,
   integrationNamed:
     /\b(UploadFile|UploadPrivateFile|CreateFileSignedUrl|InvokeLLM|SendEmail|SendSMS|GenerateImage|ExtractDataFromUploadedFile)\b/g,
-  other: /\bbase44\.(functions|agents|analytics|users|asServiceRole|appLogs|connectors)\b/g,
+  other: /\bbase44\.(functions|agents|analytics|users|asServiceRole|appLogs|connectors|app)\b/g,
   remote: /https?:\/\/[^\s'"`)<>]*(?:base44\.(?:app|com)|base44-prod|files\.base44)[^\s'"`)<>]*/g,
   env: /\b(?:VITE_|REACT_APP_|NEXT_PUBLIC_)?BASE44_\w+/g,
 };
@@ -27,7 +27,7 @@ function push(map: Record<string, Hit[]>, key: string, hit: Hit) {
 
 async function readJson(file: string): Promise<any | null> {
   try {
-    return JSON.parse(await fs.readFile(file, 'utf8'));
+    return parseJsonc(await fs.readFile(file, 'utf8'));
   } catch {
     return null;
   }
@@ -109,7 +109,7 @@ export async function analyze(extractDir: string): Promise<Analysis> {
 
     if (/^(\.base44|base44)(\/|\.)/.test(rel) || /(^|\/)base44\.config\./.test(rel)) a.base44.configFiles.push(rel);
     if (/^functions\//.test(rel)) a.base44.backendFunctions.push(rel);
-    if (/(^|\/)entities\/[^/]+\.json$/i.test(rel) || /\.entity\.json$/i.test(rel)) entityFiles.push(rel);
+    if (/(^|\/)entities\/[^/]+\.jsonc?$/i.test(rel) || /\.entity\.jsonc?$/i.test(rel)) entityFiles.push(rel);
 
     const base = path.basename(rel);
     if (base === 'pnpm-lock.yaml') a.packageManager = 'pnpm';
@@ -143,7 +143,7 @@ export async function analyze(extractDir: string): Promise<Analysis> {
   for (const rel of entityFiles) {
     const schema = await readJson(path.join(root, rel));
     if (schema && typeof schema === 'object' && schema.properties && typeof schema.properties === 'object') {
-      const name = typeof schema.name === 'string' ? schema.name : path.basename(rel).replace(/(\.entity)?\.json$/i, '');
+      const name = typeof schema.name === 'string' ? schema.name : path.basename(rel).replace(/(\.entity)?\.jsonc?$/i, '');
       a.base44.entities.push({ name, file: rel, schema } satisfies EntityInfo);
     } else {
       a.base44.unparsedEntityFiles.push(rel);

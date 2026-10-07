@@ -119,7 +119,10 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
     async REPORT() {
       const c = need();
       // The report is written into the project (so it ships inside the ZIP) and next to the ZIP, then the ZIP is rebuilt.
-      const meta = { jobId, originalName: input.originalName, sha256, stages: records };
+      // The report is written while REPORT itself is still running; show it as completed in the snapshot.
+      const now = new Date().toISOString();
+      const snapshot = records.map((r) => (r.name === 'REPORT' ? { ...r, status: 'succeeded' as const, endedAt: now } : r));
+      const meta = { jobId, originalName: input.originalName, sha256, stages: snapshot };
       const reportDir = storage.reportPath(jobId, 'md').replace(/[\\/][^\\/]+$/, '');
       await writeReports(c, meta, [projectDir, reportDir]);
       const bytes = await zipDirectory(projectDir, outZip);

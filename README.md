@@ -71,6 +71,7 @@ sudo apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin d
 **Step 3. Allow your user to run Docker without `sudo`.**
 
 ```bash
+newgrp docker
 sudo usermod -aG docker $USER
 ```
 
@@ -96,6 +97,7 @@ cd base44-local-converter
 ```bash
 sudo ufw allow OpenSSH
 sudo ufw allow 4000/tcp
+sudo ufw enable
 sudo ufw status
 ```
 
